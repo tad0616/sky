@@ -23,6 +23,7 @@ CREATE TABLE `sky_pages` (
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
-接著去瀏覽器跑 http://網址/sky.php，跟著指示做即可
+接著去瀏覽器跑 http://網址/sky.php 
+跟著指示做即可
 會將文章編號及連結存在 sky 資料表
 文章標題、內文、日期、人氣存在 sky_pages 資料表
