@@ -2,7 +2,7 @@
 //天空部落格網址（請按照範例格式）
 $site = "https://xxx.tian.yam.com/posts";
 //最大頁數（看底下分頁最多分到幾頁）
-$end_page = 10;
+$end_page = 4;
 //MySQL資料庫位址
 $DB_HOST = 'localhost';
 //MySQL資料庫帳號
@@ -37,85 +37,83 @@ PRIMARY KEY (`id`)
 // ------------------------------以下勿動------------------------------
 $db = new mysqli($DB_HOST, $DB_ID, $DB_PASS, $DB_NAME);
 if ($db->connect_error) {
-    die('DB Error:' . $db->connect_error);
+	die('DB Error:' . $db->connect_error);
 }
 $db->set_charset("utf8");
 
 $op = isset($_GET['op']) ? $_GET['op'] : '';
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-$i  = isset($_GET['i']) ? intval($_GET['i']) : 1;
+$i = isset($_GET['i']) ? intval($_GET['i']) : 1;
 
 switch ($op) {
-    case 'page':
-        get_all_page();
-        break;
+case 'page':
+	get_all_page();
+	break;
 
-    case 'id':
-        get_id($i);
-        break;
+case 'id':
+	get_id($i);
+	break;
 
-    default:
-        echo "步驟一：<a href='sky.php?op=id&i=1'>取得所有編號</a><br>
+default:
+	echo "步驟一：<a href='sky.php?op=id&i=1'>取得所有編號</a><br>
         步驟二：<a href='sky.php?op=page'>取得所有文章</a>";
-        break;
+	break;
 }
 
 //取得並紀錄所有文章編號
-function get_id($i)
-{
-    global $db, $end_page;
+function get_id($i) {
+	global $db, $end_page, $site;
 
-    if ($i > $end_page) {
-        header("location: sky.php?op=page");
-    }
+	if ($i > $end_page) {
+		header("location: sky.php?op=page");
+		exit;
+	}
 
-    $url  = "{$site}?page={$i}";
-    $page = file_get_contents($url);
-    $vv   = array();
-    preg_match_all('/data-id=\"(.*?)\"/s', $page, $vv, PREG_SET_ORDER);
-    foreach ($vv as $v) {
-        $sql = "REPLACE INTO `sky` (`id`, `link`, `page`, `ok`) VALUES('{$v[1]}', '{$site}/{$v[1]}', $i , 0)";
-        $db->query($sql) or die($db->error . $sql);
-    }
-    $i++;
-    header("location: sky.php?op=id&i={$i}");
-    exit;
+	$url = "{$site}?page={$i}";
+	$page = file_get_contents($url);
+	$vv = array();
+	preg_match_all('/data-id=\"(.*?)\"/s', $page, $vv, PREG_SET_ORDER);
+	foreach ($vv as $v) {
+		$sql = "REPLACE INTO `sky` (`id`, `link`, `page`, `ok`) VALUES('{$v[1]}', '{$site}/{$v[1]}', $i , 0)";
+		$db->query($sql) or die($db->error . $sql);
+	}
+	$i++;
+	header("location: sky.php?op=id&i={$i}");
+	exit;
 }
 
 //取得所有文章
-function get_all_page()
-{
-    global $db;
-    $sql    = "SELECT * FROM `sky` WHERE `ok`!='1' ORDER BY `page`";
-    $result = $db->query($sql) or die($db->error . $sql);
-    $all    = [];
-    while ($page = $result->fetch_assoc()) {
-        get_one_page($page['id'], $page['link']);
-    }
-    header("location: sky.php");
-    exit;
+function get_all_page() {
+	global $db;
+	$sql = "SELECT * FROM `sky` WHERE `ok`!='1' ORDER BY `page`";
+	$result = $db->query($sql) or die($db->error . $sql);
+	$all = [];
+	while ($page = $result->fetch_assoc()) {
+		get_one_page($page['id'], $page['link']);
+	}
+	header("location: sky.php");
+	exit;
 }
 
 //取得並寫入一篇文章
-function get_one_page($id, $link)
-{
-    global $db;
+function get_one_page($id, $link) {
+	global $db;
 
-    $page = file_get_contents($link);
-    $vv   = array();
-    preg_match_all('/<div class=\"post-title black inner\">(.*?)<div class=\"post-date gray text-right\">/s', $page, $vv, PREG_SET_ORDER);
-    preg_match_all('/<h1>(.*?)<\/h1>/s', $vv[0][1], $v, PREG_SET_ORDER);
-    $title = $db->real_escape_string($v[0][1]);
+	$page = file_get_contents($link);
+	$vv = array();
+	preg_match_all('/<div class=\"post-title black inner\">(.*?)<div class=\"post-date gray text-right\">/s', $page, $vv, PREG_SET_ORDER);
+	preg_match_all('/<h1>(.*?)<\/h1>/s', $vv[0][1], $v, PREG_SET_ORDER);
+	$title = $db->real_escape_string($v[0][1]);
 
-    preg_match_all('/<div class=\"post-date gray text-right\">(.*?)<\/div>/s', $page, $vv, PREG_SET_ORDER);
-    $create_date = date('Y-m-d H:i:s', strtotime(str_replace(',', '', $vv[0][1])));
+	preg_match_all('/<div class=\"post-date gray text-right\">(.*?)<\/div>/s', $page, $vv, PREG_SET_ORDER);
+	$create_date = date('Y-m-d H:i:s', strtotime(str_replace(',', '', $vv[0][1])));
 
-    preg_match_all('/<!-- post content -->(.*?)<!-- .\/post-content -->/s', $page, $vv, PREG_SET_ORDER);
-    $content = $db->real_escape_string(trim($vv[0][1]));
+	preg_match_all('/<!-- post content -->(.*?)<!-- .\/post-content -->/s', $page, $vv, PREG_SET_ORDER);
+	$content = $db->real_escape_string(trim($vv[0][1]));
 
-    preg_match_all('/<span>([0-9]+)<\/span>/s', $page, $vv, PREG_SET_ORDER);
-    $count = intval($vv[0][1]);
+	preg_match_all('/<span>([0-9]+)<\/span>/s', $page, $vv, PREG_SET_ORDER);
+	$count = intval($vv[0][1]);
 
-    $sql = "REPLACE INTO `sky_pages` (`id`, `title`, `content`, `create_date`, `count`) VALUES('{$id}', '{$title}', '{$content}' , '{$create_date}', '{$count}')";
-    $db->query($sql) or die($db->error . $sql);
+	$sql = "REPLACE INTO `sky_pages` (`id`, `title`, `content`, `create_date`, `count`) VALUES('{$id}', '{$title}', '{$content}' , '{$create_date}', '{$count}')";
+	$db->query($sql) or die($db->error . $sql);
 }
